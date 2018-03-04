@@ -129,8 +129,9 @@ def run_post(argv):
         htpFile  = \
                 ofsPath + 'estofs.' + args.domain + \
                     '.t' + args.stormCycle[-2:] + 'z.points.htp.nc'                    
-        plotPath = args.outputDir + args.domain +\
-                    '.'+ args.stormCycle +'.ts.'
+        #plotPath = args.outputDir + args.domain +\
+        #            '.'+ args.stormCycle +'.ts.'
+        plotPath = args.outputDir + 'ts-'
                     
         plot.stations (cwlFile, htpFile, pp, titleStr, plotPath, args)
 
