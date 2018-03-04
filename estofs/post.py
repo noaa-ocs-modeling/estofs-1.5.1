@@ -109,7 +109,7 @@ def run_post(argv):
 
         #plotFile = args.outputDir + 'estofs.' + args.domain +'.'+ \
         #            args.stormCycle +'.maxele.png'
-        plotFile = args.outputDir +'.maxele.png'
+        plotFile = args.outputDir +'maxele.png'
                     
         plot.maxele (maxele, grid, coast, pp, titleStr, plotFile)
         csdlpy.transfer.upload(plotFile, args.ftpLogin, args.ftpPath)
