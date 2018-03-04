@@ -45,7 +45,6 @@ def read_cmd_argv (argv):
     parser.add_argument('-f','--ftpPath',        required=True)
     
     args = parser.parse_args()    
-    print '[debug]: ', args.stormCycle
            
     if 'latest' in args.stormCycle:
         args.stormCycle = findLatestCycle(args.ofsDir+'estofs_'+args.domain+'.')
@@ -108,8 +107,10 @@ def run_post(argv):
                     args.stormCycle[-2:] + 'z MAX ELEV ' + \
                     pp['General']['units'] + ', ' + pp['General']['datum']
 
-        plotFile = args.outputDir + 'estofs.' + args.domain +'.'+ \
-                    args.stormCycle +'.maxele.png'
+        #plotFile = args.outputDir + 'estofs.' + args.domain +'.'+ \
+        #            args.stormCycle +'.maxele.png'
+        plotFile = args.outputDir +'.maxele.png'
+                    
         plot.maxele (maxele, grid, coast, pp, titleStr, plotFile)
         csdlpy.transfer.upload(plotFile, args.ftpLogin, args.ftpPath)
 
