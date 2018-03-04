@@ -163,12 +163,11 @@ def setStationPlot (master, stationName, cwl, n, oldxlim, ylim):
                 str(np.round(peak_obs_val,1)) + "m (" + 
                    str(np.round(3.28084*peak_obs_val,1)) +"ft)", color='g',
                    fontsize=7, weight='bold')
-        
-        ax.plot( [now, now], ylim, 'k',linewidth=1)
-        ax.text(  now,  ylim[1]-0.2,'NOW', color='k',fontsize=6)
-        
     except:
-        pass     
+        pass    
+    
+    ax.plot( [now, now], ylim, 'k',linewidth=1)
+    ax.text(  now,  ylim[1]-0.2,'NOW', color='k',fontsize=6)
         
     return fig, ax, ax2, xlim, stationTitle
 
