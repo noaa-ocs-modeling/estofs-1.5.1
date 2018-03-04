@@ -86,7 +86,12 @@ def run_post(argv):
     
     # Max elevations
     try: # maxEle
-
+            
+        maxeleFile = \
+                ofsPath + 'estofs.' + args.domain + \
+                    '.t' + args.stormCycle[-2:] + 'z.fields.cwl.maxele.nc'
+        maxele = csdlpy.estofs.getFieldsWaterlevel (maxeleFile, 'zeta_max')    
+ 
         # Define local files
         gridFile      = os.path.join(args.tmpDir,'fort.14')
         coastlineFile = os.path.join(args.tmpDir,'coastline.dat')
@@ -97,13 +102,7 @@ def run_post(argv):
         timestamp()
         grid   = csdlpy.adcirc.readGrid(gridFile)
         coast  = csdlpy.plotter.readCoastline(coastlineFile)
-            
-        maxeleFile = \
-                ofsPath + 'estofs.' + args.domain + \
-                    '.t' + args.stormCycle[-2:] + 'z.fields.cwl.maxele.nc'
-        print maxeleFile
-        maxele = csdlpy.estofs.getFieldsWaterlevel (maxeleFile, 'zeta_max')    
-            
+           
         titleStr = 'GFS ESTOFS' + args.domain + \
                     '.' + args.stormCycle[:-2] + '.t' + \
                     args.stormCycle[-2:] + 'z MAX ELEV ' + \
@@ -118,7 +117,7 @@ def run_post(argv):
         print '[error]: maxele not plotted!'        
     # Plot time series for all ensembles
 
-    try:
+    if True:
         timestamp()
         titleStr = 'GFS ESTOFS ' + args.domain + \
                     '.' + args.stormCycle[:-2] + '.t' + \
@@ -135,8 +134,8 @@ def run_post(argv):
                     
         plot.stations (cwlFile, htpFile, pp, titleStr, plotPath, args)
 
-    except:
-        print '[error]: problem plotting the time series!'        
+    #except:
+    #    print '[error]: problem plotting the time series!'        
     
     #Clean up temporary folder
     csdlpy.transfer.cleanup(args.tmpDir)
