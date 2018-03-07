@@ -3,11 +3,10 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg',warn=False)
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import matplotlib.dates as mdates
 from matplotlib.ticker import MultipleLocator
 from datetime import datetime
 from datetime import timedelta as dt
+import matplotlib.dates as mdates
 
 #==============================================================================
 def maxele (maxele, grid, coast, pp, titleStr, plotFile):
@@ -48,143 +47,6 @@ def maxele (maxele, grid, coast, pp, titleStr, plotFile):
     plt.close(f) 
 
 #==============================================================================
-def stageStationPlot (xlim, ylim, now, datums, floodlevels):
-    """
-    stages the hydrograph plot with vertical datums and flood levels.
-    Returns figure and axis handles.
-    """
-
-    fig, ax = plt.subplots(sharex=True, figsize=(14,4.5))
-    ax2 = ax.twinx()
-    ax.plot([],[])
-
-    datum_mhhw_ft = datums['datum_mhhw_ft']
-    datum_mllw_ft = datums['datum_mllw_ft']
-    datum_msl_ft  = datums['datum_msl_ft']
-    datum_hat_ft  = datums['datum_hat_ft']
-    
-    fl_major_ft   = floodlevels['fl_major_ft']
-    fl_moder_ft   = floodlevels['fl_moder_ft']
-    fl_minor_ft   = floodlevels['fl_minor_ft']
-
-    # Compute and plot minor flood level
-    fl_minor_m = 1./3.28084*(datum_mhhw_ft+fl_minor_ft-datum_msl_ft) 
-    if not np.isnan(fl_minor_m) and fl_minor_m < ylim[1]:
-        ax.plot(xlim[0], fl_minor_m, 'dr', markerfacecolor='r')
-        ax.text(xlim[0], fl_minor_m,\
-                'Minor Flood: ' + str(np.round(fl_minor_m,2)),color='k',fontsize=7)
-        p = patches.Rectangle((mdates.date2num(xlim[0]), fl_minor_m), \
-                              mdates.date2num(xlim[1])-mdates.date2num(xlim[0]), \
-                              ylim[1]-fl_minor_m, \
-                              color='r',alpha=0.15)
-        ax.add_patch(p)
-            
-    # Compute and plot moderate flood level
-    fl_moder_m = 1./3.28084*(datum_mhhw_ft+fl_moder_ft-datum_msl_ft) 
-    if not np.isnan(fl_moder_m) and fl_moder_m < ylim[1]:
-        ax.plot(xlim[0], fl_moder_m, 'dr', markerfacecolor='r')
-        ax.text(xlim[0], fl_moder_m,\
-                'Moderate Flood: '+ str(np.round(fl_moder_m,2)),color='k',fontsize=7)
-        p = patches.Rectangle((mdates.date2num(xlim[0]), fl_moder_m), \
-                              mdates.date2num(xlim[1])-mdates.date2num(xlim[0]), \
-                              ylim[1]-fl_moder_m, \
-                              color='r',alpha=0.15)
-        ax.add_patch(p)
-
-    # Compute and plot major flood level
-    fl_major_m = 1./3.28084*(datum_mhhw_ft+fl_major_ft-datum_msl_ft) 
-    if not np.isnan(fl_major_m) and fl_major_m < ylim[1]:
-        ax.plot(xlim[0], fl_major_m, 'dr', markerfacecolor='r')
-        ax.text(xlim[0], fl_major_m,\
-                'Major Flood: ' + str(np.round(fl_major_m,2)),color='k',fontsize=7)
-        p = patches.Rectangle((mdates.date2num(xlim[0]), fl_major_m), \
-                              mdates.date2num(xlim[1])-mdates.date2num(xlim[0]), \
-                              ylim[1]-fl_major_m, \
-                              color='r',alpha=0.15)
-        ax.add_patch(p)
-
-    # Compute and plot MHHW datum
-    datum_mhhw_m = 1./3.28084*(datum_mhhw_ft-datum_msl_ft) 
-    if not np.isnan(datum_mhhw_m) and datum_mhhw_m < ylim[1]:
-        ax.plot(xlim, [datum_mhhw_m, datum_mhhw_m], color='c')
-        ax.plot(xlim[1], datum_mhhw_m, 'dc', markerfacecolor='c')
-        ax.text(xlim[1] - dt(hours=6), 
-                datum_mhhw_m + 0.05, 'MHHW',color='c',fontsize=7)
-
-    # Compute and plot MLLW datum
-    datum_mllw_m = 1./3.28084*(datum_mllw_ft-datum_msl_ft) 
-    if not np.isnan(datum_mllw_m) and datum_mllw_m > ylim[0] and datum_mllw_m < ylim[1]:
-        ax.plot(xlim, [datum_mllw_m, datum_mllw_m], color='c')
-        ax.plot(xlim[1], datum_mllw_m, 'dc', markerfacecolor='c')
-        ax.text(xlim[1] - dt(hours=6), 
-                datum_mllw_m + 0.05, 'MLLW',color='c',fontsize=7)
-
-    # Compute and plot HAT datum
-    datum_hat_m  = 1./3.28084*(datum_hat_ft-datum_msl_ft) 
-    if not np.isnan(datum_hat_m) and datum_hat_m < ylim[1]:
-        ax.plot(xlim, [datum_hat_m, datum_hat_m], color='y')
-        ax.plot(xlim[1], datum_hat_m, 'dy', markerfacecolor='y')
-        ax.text(xlim[1] - dt(hours=6), 
-                datum_hat_m  + 0.05, 'HAT',color='y',fontsize=7)
-
-    # Plot LMSL datum
-    ax.plot(xlim[1], 0, 'dk',color='k')
-    ax.text(xlim[1] - dt(hours=6), 0.05, 'LMSL',color='k',fontsize=7)
-
-    # Plot 'now' line
-    ax.plot( [now, now], ylim, 'k',linewidth=1)
-    ax.text(  now + dt(hours=1),  ylim[1]-0.4,'N O W', color='k',fontsize=6, 
-              rotation='vertical', style='italic')
-    
-    return fig, ax, ax2
-
-#==============================================================================
-def setDatumsFloodLevels (stationid, masterList):
-
-    query = ['NOSID','Name','NWSID', \
-             'ETSS HAT-ft','ETSS MSL-ft','ETSS MLLW-ft','ETSS MHHW-ft', \
-             'Minor MHHW ft','Moderate MHHW ft','Major MHHW ft']
-    master = csdlpy.obs.parse.stationsList (masterList, query)  
-
-    datums = dict()
-    datums['datum_hat_ft']  = np.nan
-    datums['datum_msl_ft']  = np.nan
-    datums['datum_mhhw_ft'] = np.nan
-    datums['datum_mllw_ft'] = np.nan
-    
-    floodlevels = dict()
-    floodlevels['fl_minor_ft']   = np.nan
-    floodlevels['fl_moder_ft']   = np.nan
-    floodlevels['fl_major_ft']   = np.nan
-
-    stationTitle  = stationid   
-    nosid         = stationid
-    # Get data from master list
-    for m in master:
-        nosid = m[query.index('NOSID')]
-        if nosid in stationid:
-            try:
-                stationTitle  = m[query.index('Name')] + \
-                                  ' (NOS:' + m[query.index('NOSID')] + ' ' + \
-                                  ' NWS:' + m[query.index('NWSID')] + ')'
-                
-                datums['datum_hat_ft']  = float(m[query.index('ETSS HAT-ft')])
-                datums['datum_msl_ft']  = float(m[query.index('ETSS MSL-ft')])
-                datums['datum_mhhw_ft'] = float(m[query.index('ETSS MHHW-ft')])
-                datums['datum_mllw_ft'] = float(m[query.index('ETSS MLLW-ft')])
-            except:
-                pass
-            try:
-                floodlevels['fl_minor_ft'] = float(m[query.index('Minor MHHW ft')])
-                floodlevels['fl_moder_ft'] = float(m[query.index('Moderate MHHW ft')])
-                floodlevels['fl_major_ft'] = float(m[query.index('Major MHHW ft')])
-            except:
-                pass
-            break
-
-    return datums, floodlevels, nosid, stationTitle
-
-#==============================================================================
 def stations (cwlFile, htpFile, pp, titleStr, plotPath, args):
 
     clim = -0.5,3.5
@@ -217,9 +79,10 @@ def stations (cwlFile, htpFile, pp, titleStr, plotPath, args):
         fullStationName = cwl['stations'][n]
         # Get datums        
         datums, floodlevels, nosid, stationTitle = \
-            setDatumsFloodLevels (fullStationName, masterListLocal)            
+            csdlpy.obs.parse.setDatumsFloodLevels (fullStationName, masterListLocal)            
+
         # Stage the plot with datums and floodlevels   
-        fig, ax, ax2 = stageStationPlot (xlim, ylim, now, datums, floodlevels)
+        fig, ax, ax2 = csdlpy.plotter.stageStationPlot (xlim, ylim, now, datums, floodlevels)
         plt.title(titleStr + ' @ ' + stationTitle, fontsize=9)
 
        # Get OBS
@@ -321,4 +184,4 @@ def stations (cwlFile, htpFile, pp, titleStr, plotPath, args):
         csdlpy.transfer.upload(figFile, args.ftpLogin, args.ftpPath)
         
     csdlpy.transfer.cleanup()
-    
+        
