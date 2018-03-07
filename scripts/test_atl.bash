@@ -17,4 +17,4 @@ export ftpLogin="svinogradov@emcrzdm"
 export ftpPath="/home/ftp/polar/estofs/atl/"
 
 cd ${tmpDir}
-PYTHONPATH=${myModules} python -W ignore ${pythonCode} -i ${ofsDir} -s ${basin} -z ${stormCycle} -o ${outputDir} -t ${tmpDir} -p ${pltCfgFile} -u ${ftpLogin} -f ${ftpPath}# > ${logFile}
+PYTHONPATH=${myModules} python -W ignore ${pythonCode} -i ${ofsDir} -s ${basin} -z ${stormCycle} -o ${outputDir} -t ${tmpDir} -p ${pltCfgFile} -u ${ftpLogin} -f ${ftpPath} # > ${logFile}
