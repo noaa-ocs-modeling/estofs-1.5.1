@@ -80,7 +80,6 @@ def run_post(argv):
     # Read plotting parameters                   
     pp = csdlpy.plotter.read_config_ini (args.pltCfgFile)
     
-    
     timestamp()
     
     # Max elevations
@@ -116,13 +115,16 @@ def run_post(argv):
 
     except:
         print '[error]: maxele not plotted!'        
-    # Plot time series for all ensembles
 
     if True:
         timestamp()
-        titleStr = 'GFS ESTOFS ' + args.domain + \
-                    '.' + args.stormCycle[:-2] + '.t' + \
-                          args.stormCycle[-2:] + 'z '
+        fcstYear  = args.stormCycle[:-6]
+        fcstMonth = args.stormCycle[-6:-4]
+        fcstDay   = args.stormCycle[-4:-2]
+        fcstHour  = args.stormCycle[-2:]
+        
+        titleStr = 'ESTOFS Forecast Cycle ' + \
+            fcstMonth + '/' + fcstDay + '/' + fcstYear + ' ' +fcstHour + 'UTC'
 
         cwlFile  = \
                 ofsPath + 'estofs.' + args.domain + \
@@ -133,11 +135,8 @@ def run_post(argv):
         #plotPath = args.outputDir + args.domain +\
         #            '.'+ args.stormCycle +'.ts.'
         plotPath = args.outputDir + 'ts-'
-                    
         plot.stations (cwlFile, htpFile, pp, titleStr, plotPath, args)
 
-    #except:
-    #    print '[error]: problem plotting the time series!'        
     
     #Clean up temporary folder
     csdlpy.transfer.cleanup(args.tmpDir)
@@ -148,5 +147,4 @@ if __name__ == "__main__":
     timestamp()
     run_post (sys.argv[1:])
     timestamp()
-    
     
