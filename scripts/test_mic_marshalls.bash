@@ -15,9 +15,9 @@ export basin="mic"
 export stormCycle="latest" #"2018030218"
 export outputDir=${platform}"/gpfs/hps3/nos/noscrub/polar/estofs_mic/"
 export tmpDir=${platform}"/gpfs/hps3/nos/noscrub/tmp/estofs_mic/"
-export pltCfgFile=${platform}"/gpfs/hps3/nos/noscrub/nwprod/estofs-1.5.1/scripts/config.plot.estofs.mic.ini"
+export pltCfgFile=${platform}"/gpfs/hps3/nos/noscrub/nwprod/estofs-1.5.1/scripts/config.plot.estofs.mic.marshalls.ini"
 
 export ftpLogin="svinogradov@emcrzdm"
-export ftpPath="/home/ftp/polar/estofs/mic/"    
+export ftpPath="/home/ftp/polar/estofs/"    
 
-PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -i ${ofsDir} -s ${basin} -z ${stormCycle} -o ${outputDir} -t ${tmpDir} -p ${pltCfgFile} -u ${ftpLogin} -f ${ftpPath} > ${logFile}
+PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -i ${ofsDir} -s ${basin} -z ${stormCycle} -o ${outputDir} -t ${tmpDir} -p ${pltCfgFile} -u ${ftpLogin} -f ${ftpPath} #> ${logFile}
