@@ -11,9 +11,9 @@ import glob
 
 #==============================================================================
 def timestamp():
-    print '-    -'
+    print '------'
     print '[Time]: ' + str(datetime.datetime.utcnow()) + ' UTC'
-    print '-    -'
+    print '------'
     
 #==============================================================================
 def findLatestCycle (dirMask):
@@ -79,29 +79,49 @@ def run_post(argv):
 
     # Read plotting parameters                   
     pp = csdlpy.plotter.read_config_ini (args.pltCfgFile)
-    
     timestamp()
     
     # Max elevations
     try: # maxEle
-            
+    #if True:
         maxeleFile = \
                 ofsPath + 'estofs.' + args.domain + \
                     '.t' + args.stormCycle[-2:] + 'z.fields.cwl.maxele.nc'
-        maxele = csdlpy.estofs.getFieldsWaterlevel (maxeleFile, 'zeta_max')    
+        if not os.path.exists (maxeleFile):
+            #try to compute maxele from fort.63 fields
+            hourlyFields = \
+                ofsPath + 'estofs.' + args.domain + \
+                    '.t' + args.stormCycle[-2:] + 'z.fields.cwl.nc'
+            print '[info]: Trying to compute maxele from ', hourlyFields
+            maxele = csdlpy.adcirc.computeMaxele(hourlyFields)
+        else:
+            maxele = csdlpy.estofs.getFieldsWaterlevel (maxeleFile, 'zeta_max')    
  
         # Define local files
         gridFile      = os.path.join(args.tmpDir,'fort.14')
         coastlineFile = os.path.join(args.tmpDir,'coastline.dat')
-        
+        citiesFile    = os.path.join(args.tmpDir,'cities.csv') 
         csdlpy.transfer.download (      pp['Grid']['url'],      gridFile)
         csdlpy.transfer.download ( pp['Coastline']['url'], coastlineFile)
+        csdlpy.transfer.download ( pp['Cities']['url'],       citiesFile)
 
+        #Tracks
+        trk = []
+        adv = []
+        if int(pp['Storm']['plot']) ==1:
+            trkFile = os.path.join(args.tmpDir,'trk.tmp')
+            advFile = os.path.join(args.tmpDir,'adv.tmp')
+            csdlpy.transfer.refresh( pp['Storm']['track'],    trkFile)
+            csdlpy.transfer.refresh( pp['Storm']['forecast'], advFile)
+            trk    = csdlpy.atcf.readTrack(trkFile, product='BEST')
+            adv    = csdlpy.atcf.readTrack(advFile, product='JTWC,OFCL')
+        
         timestamp()
         grid   = csdlpy.adcirc.readGrid(gridFile)
         coast  = csdlpy.plotter.readCoastline(coastlineFile)
-           
-        titleStr = 'GFS ESTOFS' + args.domain + \
+        cities = csdlpy.plotter.readCities (citiesFile)
+
+        titleStr = 'ESTOFS (GFS) ' + args.domain + \
                     '.' + args.stormCycle[:-2] + '.t' + \
                     args.stormCycle[-2:] + 'z MAX ELEV ' + \
                     pp['General']['units'] + ', ' + pp['General']['datum']
@@ -110,9 +130,8 @@ def run_post(argv):
         #            args.stormCycle +'.maxele.png'
         plotFile = args.outputDir +'maxele.png'
                     
-        plot.maxele (maxele, grid, coast, pp, titleStr, plotFile)
+        plot.maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile)
         csdlpy.transfer.upload(plotFile, args.ftpLogin, args.ftpPath)
-
     except:
         print '[error]: maxele not plotted!'        
 
