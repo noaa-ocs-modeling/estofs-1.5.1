@@ -9,7 +9,7 @@ from datetime import timedelta as dt
 import matplotlib.dates as mdates
 
 #==============================================================================
-def maxele (maxele, grid, coast, pp, titleStr, plotFile):
+def maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile):
     
     # Default plotting limits, based on advisory track, first position
     lonlim = np.min(grid['lon']), np.max(grid['lon'])
@@ -21,28 +21,38 @@ def maxele (maxele, grid, coast, pp, titleStr, plotFile):
         clim   = float(pp['Limits']['cmin']),  float(pp['Limits']['cmax'])
     except: #default limits, in case if not specified in ini file
         pass
-    # Find maximal maxele value within the coord limits
-    maxmax = np.max(maxele['value'][np.where( \
-                   (lonlim[0] <= maxele['lon']) & (maxele['lon'] <= lonlim[1]) & \
-                   (latlim[0] <= maxele['lat']) & (maxele['lat'] <= latlim[1]))])
-    lonmax = maxele['lon'][np.where(maxele['value']==maxmax)]
-    latmax = maxele['lat'][np.where(maxele['value']==maxmax)]
-    print '[info]: max maxele = ',str(maxmax),'at ',str(lonmax),'x',str(latmax)
-        
-    f = csdlpy.plotter.plotMap(lonlim, latlim, fig_w=10., coast=coast)
+
+    f = csdlpy.plotter.plotMap(lonlim, latlim, fig_w=20., coast=coast)
     csdlpy.plotter.addSurface (grid, maxele['value'],clim=clim)
-    
     plt.text (lonlim[0]+0.01, latlim[0]+0.01, titleStr )
-    maxStr = 'MAX VAL='+ str(np.round(maxmax,1)) + ' '
-    try:
-        maxStr = maxStr + pp['General']['units'] +', '+ pp['General']['datum']
-    except:
-        pass # in case if there is a problem with pp
-    plt.text (lonlim[0]+0.01, latlim[1]-0.1, maxStr)
+
+    if int(pp['General']['plotmax']) ==1:
+        # Find maximal maxele value within the coord limits
+        maxmax = np.max(maxele['value'][np.where( \
+                       (lonlim[0] <= maxele['lon']) & (maxele['lon'] <= lonlim[1]) & \
+                       (latlim[0] <= maxele['lat']) & (maxele['lat'] <= latlim[1]))])
+        lonmax = maxele['lon'][np.where(maxele['value']==maxmax)]
+        latmax = maxele['lat'][np.where(maxele['value']==maxmax)]
+        print '[info]: max maxele = ',str(maxmax),'at ',str(lonmax),'x',str(latmax)
         
-    plt.plot(lonmax, latmax, 'ow',markerfacecolor='k',markersize=10)
-    plt.plot(lonmax, latmax, 'ow',markerfacecolor='r',markersize=5)
-    plt.text (lonmax,latmax, str(np.round(maxmax,1)),color='k',fontsize=10)
+    	maxStr = 'MAX VAL='+ str(np.round(maxmax,1)) + ' '
+    	try:
+            maxStr = maxStr + pp['General']['units'] +', '+ pp['General']['datum']
+	except:
+            pass # in case if there is a problem with pp
+        plt.text (lonlim[0]+0.01, latlim[1]-2., maxStr, fontsize='7')
+        plt.plot(lonmax, latmax, 'ow',markerfacecolor='k',markersize=8)
+        plt.plot(lonmax, latmax, 'ow',markerfacecolor='r',markersize=4)
+        plt.text (lonmax+0.05,latmax+0.05, str(np.round(maxmax,1)),color='k',fontsize=6)
+    
+    plt.text (lonlim[0]+0.01, latlim[1]+0.1,'NOAA / OCEAN SERVICE')   
+    if int(pp['Cities']['plot']) ==1:
+        csdlpy.plotter.plotCities (cities, lonlim, latlim, col='k', fs=6)
+    if int(pp['Storm']['plot'])  ==1:
+        print '[info]: plotting tracks' 
+        csdlpy.plotter.plotTrack(adv, color='r',   linestyle=':',markersize=1,zorder=10,fs=1)
+        csdlpy.plotter.plotTrack(trk, color='gray',linestyle=':',markersize=1,zorder=10,fs=1)
+
     csdlpy.plotter.save(titleStr, plotFile)
     plt.close(f) 
 
@@ -165,11 +175,11 @@ def stations (cwlFile, htpFile, pp, titleStr, plotPath, args):
         ax.text(xlim[0],ylim[1]+0.05,'NOAA / OCEAN SERVICE')
         ax.set_ylabel ('WATER LEVELS, meters MSL')
         ax2.set_ylabel('WATER LEVELS, feet MSL')
-        ax.set_xlabel('DATE UTC')
+        ax.set_xlabel('DATE/TIME UTC')
         ax.grid(True,which='both')   
         
         ax.xaxis.set_major_locator(mdates.DayLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d\n00:00'))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%a %m/%d\n00:00'))
         ax.xaxis.set_minor_locator(MultipleLocator(0.5))
         
         ax.set_xlim (        xlim)
