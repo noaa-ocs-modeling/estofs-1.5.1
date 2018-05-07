@@ -113,8 +113,8 @@ def run_post(argv):
             advFile = os.path.join(args.tmpDir,'adv.tmp')
             csdlpy.transfer.refresh( pp['Storm']['track'],    trkFile)
             csdlpy.transfer.refresh( pp['Storm']['forecast'], advFile)
-            trk    = csdlpy.atcf.readTrack(trkFile, product='BEST')
-            adv    = csdlpy.atcf.readTrack(advFile, product='JTWC,OFCL')
+            trk    = csdlpy.atcf.read.track(trkFile, product='BEST')
+            adv    = csdlpy.atcf.read.track(advFile, product='JTWC,OFCL')
         
         timestamp()
         grid   = csdlpy.adcirc.readGrid(gridFile)
