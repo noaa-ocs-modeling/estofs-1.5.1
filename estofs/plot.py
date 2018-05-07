@@ -49,9 +49,10 @@ def maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile):
     if int(pp['Cities']['plot']) ==1:
         csdlpy.plotter.plotCities (cities, lonlim, latlim, col='k', fs=6)
     if int(pp['Storm']['plot'])  ==1:
-        print '[info]: plotting tracks' 
-        csdlpy.plotter.plotTrack(adv, color='r',   linestyle=':',markersize=1,zorder=10,fs=1)
-        csdlpy.plotter.plotTrack(trk, color='gray',linestyle=':',markersize=1,zorder=10,fs=1)
+        print '[info]: plotting tracks'
+	ax = plt.gca()
+        csdlpy.atcf.plot.track(ax, adv, color='r',   linestyle=':',markersize=1,zorder=10,fs=1)
+        csdlpy.atcf.plot.track(ax, trk, color='gray',linestyle=':',markersize=1,zorder=10,fs=1)
 
     csdlpy.plotter.save(titleStr, plotFile)
     plt.close(f) 
