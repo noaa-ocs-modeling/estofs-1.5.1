@@ -54,6 +54,23 @@ def maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile):
         csdlpy.atcf.plot.track(ax, adv, color='r',   linestyle=':',markersize=1,zorder=10,fs=1)
         csdlpy.atcf.plot.track(ax, trk, color='gray',linestyle=':',markersize=1,zorder=10,fs=1)
 
+    ticks  = ax.get_xticks()
+    print '[info]: Setting proper longitude labels.'
+    labels = ax.get_xticklabels()
+    newlabels = []
+    n = -1
+    for label in labels:
+        n += 1
+        if ticks[n]>=0:
+            newTick = str( int(ticks[n]) ) + 'E'
+        elif ticks[n] <= -180:
+            newTick = str( int(ticks[n]) + 360) + 'E'
+        else:
+            newTick = str (-1*int(ticks[n])) + 'W'
+        label.set_text( newTick )
+        newlabels.append( label )
+    ax.set_xticklabels( newlabels )
+	
     csdlpy.plotter.save(titleStr, plotFile)
     plt.close(f) 
 
