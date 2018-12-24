@@ -48,14 +48,15 @@ def maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile):
     plt.text (lonlim[0]+0.01, latlim[1]+0.1,'NOAA / OCEAN SERVICE')   
     if int(pp['Cities']['plot']) ==1:
         csdlpy.plotter.plotCities (cities, lonlim, latlim, col='k', fs=6)
+    ax = plt.gca()
     if int(pp['Storm']['plot'])  ==1:
         print '[info]: plotting tracks'
-	ax = plt.gca()
         csdlpy.atcf.plot.track(ax, adv, color='r',   linestyle=':',markersize=1,zorder=10,fs=1)
         csdlpy.atcf.plot.track(ax, trk, color='gray',linestyle=':',markersize=1,zorder=10,fs=1)
-
+    
+    #TODO Address the case when lon/lat ticks are not integers
     ticks  = ax.get_xticks()
-    print '[info]: Setting proper longitude labels.'
+    print '[info]: Converting longitude labels from negative Westerlies to positive Easterlies'
     labels = ax.get_xticklabels()
     newlabels = []
     n = -1
@@ -66,11 +67,26 @@ def maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile):
         elif ticks[n] <= -180:
             newTick = str( int(ticks[n]) + 360) + 'E'
         else:
-            newTick = str (-1*int(ticks[n])) + 'W'
+            newTick = str (-1*int(ticks[n])) + 'W' 
         label.set_text( newTick )
         newlabels.append( label )
     ax.set_xticklabels( newlabels )
-	
+
+    ticks  = ax.get_yticks()
+    print '[info]: Converting latitude labels from negative Northerlies to positive Southerlies'
+    labels = ax.get_yticklabels()
+    newlabels = []
+    n = -1
+    for label in labels:
+        n += 1
+        if ticks[n]>=0:
+            newTick = str( int(ticks[n]) ) + 'N'
+        else:
+            newTick = str (-1*int(ticks[n])) + 'S'
+        label.set_text( newTick )
+        newlabels.append( label )
+    ax.set_yticklabels( newlabels )
+
     csdlpy.plotter.save(titleStr, plotFile)
     plt.close(f) 
 
