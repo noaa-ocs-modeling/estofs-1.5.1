@@ -19,6 +19,6 @@ export tmpDir=${platform}"/gpfs/hps3/nos/noscrub/tmp/estofs_pac/"
 export pltCfgFile=${platform}"/gpfs/hps3/nos/noscrub/nwprod/estofs-1.5.1/scripts/config.plot.estofs.pac.ini"
 
 export ftpLogin="svinogradov@emcrzdm"
-export ftpPath="/home/ftp/polar/estofs/pac/"
+export ftpPath="/home/www/polar/estofs/pac/"
 
 PYTHONPATH=${myModules} ${pyPath}/python -W ignore ${pythonCode} -i ${ofsDir} -s ${basin} -z ${stormCycle} -o ${outputDir} -t ${tmpDir} -p ${pltCfgFile} -u ${ftpLogin} -f ${ftpPath} > ${logFile}
