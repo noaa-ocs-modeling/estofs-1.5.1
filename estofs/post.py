@@ -19,7 +19,8 @@ def timestamp():
 def findLatestCycle (dirMask):
     
     dirs = glob.glob(dirMask+'*')
-    latestDir = max(dirs, key=os.path.getctime)    
+    #latestDir = max(dirs, key=os.path.getctime)
+    latestDir = max(dirs)    
     D = os.path.basename(latestDir).split('.')[-1]
 
     files = glob.glob(latestDir + '/*.points.cwl.nc')
@@ -47,7 +48,12 @@ def read_cmd_argv (argv):
     args = parser.parse_args()    
            
     if 'latest' in args.stormCycle:
-        args.stormCycle = findLatestCycle(args.ofsDir+'estofs_'+args.domain+'.')
+        if args.domain == 'glo':
+            #args.stormCycle = findLatestCycle(args.ofsDir+'estofs'+'.')
+            args.stormCycle = findLatestCycle(args.ofsDir+'stofs_2d_glo'+'.')
+        else:
+            #args.stormCycle = findLatestCycle(args.ofsDir+'estofs_'+args.domain+'.')
+            args.stormCycle = findLatestCycle(args.ofsDir+'stofs_2d_glo_'+args.domain+'.')
         
     print '[info]: estofs_post.py is configured with :', args
     return args
@@ -62,7 +68,12 @@ def run_post(argv):
     args = read_cmd_argv(argv)
 
     #Locate hsofs path
-    ofsPath = args.ofsDir +'estofs_'+ args.domain + '.' + args.stormCycle[:-2] +'/'
+    if args.domain == 'glo':
+        #ofsPath = args.ofsDir +'estofs'+ '.' + args.stormCycle[:-2] +'/'
+        ofsPath = args.ofsDir +'stofs_2d_glo'+ '.' + args.stormCycle[:-2] +'/'
+    else:
+        #ofsPath = args.ofsDir +'estofs_'+ args.domain + '.' + args.stormCycle[:-2] +'/'
+        ofsPath = args.ofsDir +'stofs_2d_glo_'+ args.domain + '.' + args.stormCycle[:-2] +'/'
     if not os.path.exists(ofsPath):
         print '[error]: ofs path ' + ofsPath+ ' does not exist. Exiting'
         return
@@ -80,17 +91,75 @@ def run_post(argv):
     # Read plotting parameters                   
     pp = csdlpy.plotter.read_config_ini (args.pltCfgFile)
     timestamp()
+
+    # Plotting maxwvel
+    if args.domain == 'glo':
+        maxwvelFile = \
+            ofsPath + 'stofs_2d_glo' + '.t' + args.stormCycle[-2:] + 'z.fields.cwl.maxwvel.nc'
+    else:
+        maxwvelFile = \
+            ofsPath + 'stofs_2d_glo.' + args.domain + '.t' + args.stormCycle[-2:] + 'z.fields.cwl.maxwvel.nc'
+    if int(pp['Wind']['plot']) == 0 or not os.path.exists (maxwvelFile):
+            print '[error]: No maxwvel file found. Skipping... ', maxwvelFile
+    else:
+        maxwvel = csdlpy.estofs.getFieldsWaterlevel (maxwvelFile, 'wind_max')
+        # Define local files
+        gridFile      = os.path.join(args.tmpDir,'fort.14')
+        coastlineFile = os.path.join(args.tmpDir,'coastline.dat')
+        citiesFile    = os.path.join(args.tmpDir,'cities.csv')
+        csdlpy.transfer.download (      pp['Grid']['url'],      gridFile)
+        csdlpy.transfer.download ( pp['Coastline']['url'], coastlineFile)
+        csdlpy.transfer.download ( pp['Cities']['url'],       citiesFile)
+
+        #Tracks
+        trk = []
+        adv = []
+        if int(pp['Storm']['plot']) ==1:
+            trkFile = os.path.join(args.tmpDir,'trk.tmp')
+            advFile = os.path.join(args.tmpDir,'adv.tmp')
+            csdlpy.transfer.refresh( pp['Storm']['track'],    trkFile)
+            csdlpy.transfer.refresh( pp['Storm']['forecast'], advFile)
+            trk    = csdlpy.atcf.read.track(trkFile, product='BEST')
+            adv    = csdlpy.atcf.read.track(advFile, product='JTWC,OFCL')
+
+        timestamp()
+        grid   = csdlpy.adcirc.readGrid(gridFile)
+        coast  = csdlpy.plotter.readCoastline(coastlineFile)
+        cities = csdlpy.plotter.readCities (citiesFile)
+
+        #titleStr = 'ESTOFS (GFS) ' + args.domain + \
+        titleStr = 'STOFS-2D-GLO (GFS) ' + args.domain + \
+                    '.' + args.stormCycle[:-2] + '.t' + \
+                    args.stormCycle[-2:] + 'z MAX WIND, knots'
+
+        plotFile = args.outputDir +'maxwvel.png'
+
+        plot.maxwind(maxwvel, trk, adv, grid, coast, pp, titleStr, plotFile)
+        csdlpy.transfer.upload(plotFile, args.ftpLogin, args.ftpPath)
+    #except:
+    #    print '[error]: maxele not plotted!'
+
     
     # Max elevations
-    try: # maxEle
-    #if True:
-        maxeleFile = \
-                ofsPath + 'estofs.' + args.domain + \
-                    '.t' + args.stormCycle[-2:] + 'z.fields.cwl.maxele.nc'
+    #try: # maxEle
+    if int(pp['Limits']['plot']) ==1:
+        if args.domain == 'glo':
+            maxeleFile = \
+                ofsPath + 'stofs_2d_glo' + \
+                '.t' + args.stormCycle[-2:] + 'z.fields.cwl.maxele.nc'
+        else:
+            maxeleFile = \
+                ofsPath + 'stofs_2d_glo.' + args.domain + \
+                '.t' + args.stormCycle[-2:] + 'z.fields.cwl.maxele.nc'
         if not os.path.exists (maxeleFile):
             #try to compute maxele from fort.63 fields
-            hourlyFields = \
-                ofsPath + 'estofs.' + args.domain + \
+            if args.domain == 'glo':
+                hourlyFields = \
+                    ofsPath + 'stofs_2d_glo' + \
+                    '.t' + args.stormCycle[-2:] + 'z.fields.cwl.nc'
+            else:
+                hourlyFields = \
+                    ofsPath + 'stofs_2d_glo.' + args.domain + \
                     '.t' + args.stormCycle[-2:] + 'z.fields.cwl.nc'
             print '[info]: Trying to compute maxele from ', hourlyFields
             maxele = csdlpy.adcirc.computeMaxele(hourlyFields)
@@ -121,7 +190,8 @@ def run_post(argv):
         coast  = csdlpy.plotter.readCoastline(coastlineFile)
         cities = csdlpy.plotter.readCities (citiesFile)
 
-        titleStr = 'ESTOFS (GFS) ' + args.domain + \
+        #titleStr = 'ESTOFS (GFS) ' + args.domain + \
+        titleStr = 'STOFS-2D-GLO (GFS) ' + args.domain + \
                     '.' + args.stormCycle[:-2] + '.t' + \
                     args.stormCycle[-2:] + 'z MAX ELEV ' + \
                     pp['General']['units'] + ', ' + pp['General']['datum']
@@ -132,25 +202,35 @@ def run_post(argv):
                     
         plot.maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile)
         csdlpy.transfer.upload(plotFile, args.ftpLogin, args.ftpPath)
-    except:
-        print '[error]: maxele not plotted!'        
+    #except:
+    #    print '[error]: maxele not plotted!'        
 
-    if True:
+    # Plotting Stations
+    if int(pp['Stations']['plot']) ==1:
         timestamp()
         fcstYear  = args.stormCycle[:-6]
         fcstMonth = args.stormCycle[-6:-4]
         fcstDay   = args.stormCycle[-4:-2]
         fcstHour  = args.stormCycle[-2:]
         
-        titleStr = 'ESTOFS Forecast Cycle ' + \
+        #titleStr = 'ESTOFS Forecast Cycle ' + \
+        titleStr = 'STOFS-2D-GLO Forecast Cycle ' + \
             fcstMonth + '/' + fcstDay + '/' + fcstYear + ' ' +fcstHour + 'UTC'
 
-        cwlFile  = \
-                ofsPath + 'estofs.' + args.domain + \
-                    '.t' + args.stormCycle[-2:] + 'z.points.cwl.nc'                    
-        htpFile  = \
-                ofsPath + 'estofs.' + args.domain + \
-                    '.t' + args.stormCycle[-2:] + 'z.points.htp.nc'                    
+        if args.domain == 'glo':
+            cwlFile  = \
+                ofsPath + 'stofs_2d_glo' + \
+                '.t' + args.stormCycle[-2:] + 'z.points.cwl.nc'                    
+            htpFile  = \
+                ofsPath + 'stofs_2d_glo' + \
+                '.t' + args.stormCycle[-2:] + 'z.points.htp.nc'
+        else:
+            cwlFile  = \
+                ofsPath + 'stofs_2d_glo.' + args.domain + \
+                '.t' + args.stormCycle[-2:] + 'z.points.cwl.nc'                    
+            htpFile  = \
+                ofsPath + 'stofs_2d_glo.' + args.domain + \
+                '.t' + args.stormCycle[-2:] + 'z.points.htp.nc'                    
         #plotPath = args.outputDir + args.domain +\
         #            '.'+ args.stormCycle +'.ts.'
         plotPath = args.outputDir + 'ts-'

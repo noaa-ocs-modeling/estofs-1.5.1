@@ -28,6 +28,13 @@ def maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile):
 
     if int(pp['General']['plotmax']) ==1:
         # Find maximal maxele value within the coord limits
+
+        # Exclude Gulf of Maine
+        #lonGoM = -70.
+        #latGoM = 42.
+        #maxmax = np.max(maxele['value'][np.where( \
+        #           (lonlim[0] <= maxele['lon']) & (maxele['lon'] <= lonGoM) & \
+        #           (latlim[0] <= maxele['lat']) & (maxele['lat'] <= latGoM))])
         maxmax = np.max(maxele['value'][np.where( \
                        (lonlim[0] <= maxele['lon']) & (maxele['lon'] <= lonlim[1]) & \
                        (latlim[0] <= maxele['lat']) & (maxele['lat'] <= latlim[1]))])
@@ -89,6 +96,67 @@ def maxele (maxele, grid, coast, cities, trk, adv, pp, titleStr, plotFile):
 
     csdlpy.plotter.save(titleStr, plotFile)
     plt.close(f) 
+
+
+#==============================================================================
+def maxwind (maxele, tracks, advTrk, grid, coast, pp, titleStr, plotFile):
+
+    # Convert m/s to knots
+    maxele['value'] = 1.94384*maxele['value']
+
+    # Default plotting limits, based on advisory track, first position
+    clim   = 0.,120.
+    try:
+        lonlim = float(pp['Limits']['lonmin']),float(pp['Limits']['lonmax'])
+        latlim = float(pp['Limits']['latmin']),float(pp['Limits']['latmax'])
+        clim   = float(pp['Wind']['cmin']),  float(pp['Wind']['cmax'])
+    except: #default limits, in case if not specified in ini file
+        pass
+    # Find maximal maxele value within the coord limits
+    maxmax = np.max(maxele['value'][np.where( \
+                   (lonlim[0] <= maxele['lon']) & (maxele['lon'] <= lonlim[1]) & \
+                   (latlim[0] <= maxele['lat']) & (maxele['lat'] <= latlim[1]))])
+  
+    if isinstance(maxmax,(list,)):
+        maxmax = maxmax[0]
+    lonmax = maxele['lon'][np.where(maxele['value']==maxmax)]
+    latmax = maxele['lat'][np.where(maxele['value']==maxmax)]
+    if isinstance(lonmax,(list,)):
+        lonmax = lonmax[0]
+        latmax = latmax[0]
+    if maxmax is np.ma.masked:
+        maxmax = np.nan
+    print '[info]: max maxwvel (knots) = ',np.str(maxmax),'at ', np.str(lonmax),'x', np.str(latmax)
+
+    f = csdlpy.plotter.plotMap(lonlim, latlim, fig_w=20., coast=coast)
+    csdlpy.plotter.addSurface (grid, maxele['value'],clim=clim)
+    ax = f.gca()
+    try:
+        csdlpy.atcf.plot.track(ax, advTrk, color='k',linestyle='--',markersize=1,zorder=11)
+        csdlpy.atcf.plot.size (ax, advTrk, 'neq64', color='k',zorder=11)
+    except:
+        pass
+
+    plt.text (lonlim[0]+0.01, latlim[0]-0.2, titleStr )
+    if not np.isnan(maxmax):
+        maxStr = 'MAX VAL='+ np.str(np.round(maxmax,1)) + ' '
+        try:
+            maxStr = maxStr + ' knots' #pp['General']['units'] +', '+ pp['General']['datum']
+        except:
+            pass # in case if there is a problem with pp
+        plt.text (lonlim[0]+0.01, latlim[1]-2, maxStr)
+
+    plt.plot(lonmax, latmax, 'ow',markerfacecolor='k',markersize=10)
+    plt.plot(lonmax, latmax, 'ow',markerfacecolor='r',markersize=5)
+    plt.text (lonmax,latmax, str(np.round(maxmax,1)),color='k',fontsize=10)
+    plt.text (lonlim[0]+0.01, latlim[1]+0.1,'NOAA / OCEAN SERVICE')
+
+    try:
+        csdlpy.plotter.save(titleStr, plotFile)
+    except:
+        print '[error]: cannot save maxele figure.'
+
+    plt.close(f)
 
 #==============================================================================
 def stations (cwlFile, htpFile, pp, titleStr, plotPath, args):
@@ -162,15 +230,24 @@ def stations (cwlFile, htpFile, pp, titleStr, plotPath, args):
                 color='c',label='ASTRON TIDE',linewidth=.5)
         ax.plot(cwl['time'], cwl['zeta'][:,n],      
                 color='navy',label='STORM TIDE',linewidth=2.0)
-        ax.plot(cwl['time'], cwl['zeta'][:,n]-htp['zeta'][:,n],
-                color='m',label='STORM SURGE',linewidth=.5)
+        try: # In case tidal run failed
+            ax.plot(cwl['time'], cwl['zeta'][:,n]-htp['zeta'][:,n],
+                    color='m',label='STORM SURGE',linewidth=.5)
+        except:
+            print '[warn]: Tidal output is not plotted.'
+            pass
         
         # Find model value closest to Now
+        mint        = []
+        now_mod_int = []
+        now_mod_ind = []
         mint = min(cwl['time'], key=lambda x: abs(x - now))        
         now_mod_ind = np.where(cwl['time'] == mint)[0][0]
         now_mod = cwl['zeta'][now_mod_ind,n]
         offset  = now_obs  -  now_mod 
-        print '[debug]: offset=', str(offset)
+        #print '[debug]: offset=', str(offset)
+        #print '[debug]: now_mod=', str(now_mod)
+        #print '[debug]: now_mod_ind=', str(now_mod_ind)
         
         peak_val = np.nanmax(cwl['zeta'][:,n])
         peak_dat = cwl['time'][np.argmax(cwl['zeta'][:,n])]
@@ -182,26 +259,33 @@ def stations (cwlFile, htpFile, pp, titleStr, plotPath, args):
         ax.plot([peak_dat, peak_dat], [ylim[0], peak_val], '--',color='navy')
         peak_str = str(peak_dat.hour).zfill(2) + ':' + str(peak_dat.minute).zfill(2) + 'z'
         ax.text(peak_dat+dt(hours=0.5), ylim[0], peak_str ,color='navy', fontsize=7)            
-        ax.plot(peak_dat, peak_val, 'o',markeredgecolor='navy',markerfacecolor='b')
+        try:
+            ax.plot(peak_dat, peak_val, 'o',markeredgecolor='navy',markerfacecolor='b')
+	except:
+            print '[warn]: Storm tide output is not plotted.'
+            pass
 
-        # Plot offset forecast
-        ax.plot(cwl['time'][now_mod_ind:], offset + cwl['zeta'][now_mod_ind:,n],      
-                color='gray', linestyle=':', linewidth=.5)
+        print offset
+
+        if np.isfinite(offset):
+            # Plot offset forecast
+            ax.plot(cwl['time'][now_mod_ind:], offset + cwl['zeta'][now_mod_ind:,n],      
+                    color='gray', linestyle=':', linewidth=.5)
         
-        # offset value
-        if ylim[0] <= 0.5*(now_mod+now_obs) and 0.5*(now_mod+now_obs) <= ylim[1]:
-            ax.text(cwl['time'][now_mod_ind]+dt(hours=1), 0.5*(now_mod+now_obs), 
-                    r'$\Delta$='+str(np.round(offset,2)) + 'm', color='gray',
-                    fontsize=7, fontstyle='italic', fontweight='bold')
+            # offset value
+            if ylim[0] <= 0.5*(now_mod+now_obs) and 0.5*(now_mod+now_obs) <= ylim[1]:
+                ax.text(cwl['time'][now_mod_ind]+dt(hours=1), 0.5*(now_mod+now_obs), 
+                        r'$\Delta$='+str(np.round(offset,2)) + 'm', color='gray',
+                        fontsize=7, fontstyle='italic', fontweight='bold')
 
-        # add offseted peak forecast value
-        if ylim[0] <= peak_val+offset and peak_val+offset <= ylim[1]:
-            ax.plot(peak_dat, peak_val+offset, marker='+',
-                    markeredgecolor='gray', markerfacecolor='gray', markersize=5)
-            ax.text(peak_dat, 1.05*(peak_val+offset), 
-                str(np.round(peak_val+offset,1)) + "m (" + 
-                str(np.round(3.28084*(peak_val+offset),1)) +"ft)", color='gray',
-                   fontstyle='italic', fontsize=6)
+            # add offseted peak forecast value
+            if ylim[0] <= peak_val+offset and peak_val+offset <= ylim[1]:
+                ax.plot(peak_dat, peak_val+offset, marker='+',
+                        markeredgecolor='gray', markerfacecolor='gray', markersize=5)
+                ax.text(peak_dat, 1.05*(peak_val+offset), 
+                    str(np.round(peak_val+offset,1)) + "m (" + 
+                    str(np.round(3.28084*(peak_val+offset),1)) +"ft)", color='gray',
+                       fontstyle='italic', fontsize=6)
 
         ax.legend(bbox_to_anchor=(0.8, 1.001, 0.17, 0.07), loc=3, 
                   ncol=2, mode="expand", borderaxespad=0., fontsize=7)
@@ -223,7 +307,10 @@ def stations (cwlFile, htpFile, pp, titleStr, plotPath, args):
 
         plt.tight_layout()
         figFile = plotPath + str(n+1).zfill(3) + '.png'
-        plt.savefig(figFile)
+        try:
+            plt.savefig(figFile)
+        except:
+            pass
         plt.close()
         csdlpy.transfer.upload(figFile, args.ftpLogin, args.ftpPath)
         
